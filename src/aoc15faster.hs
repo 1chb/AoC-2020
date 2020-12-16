@@ -22,4 +22,4 @@ next :: Int -> Int -> Int -> Map -> Int
 next n = go where
   go ix last map
     | ix == n = last
-    | otherwise = go (ix+1) (maybe 0 (ix-) (M.lookup last map)) $ M.insert last ix map
+    | otherwise = go (ix+1) (maybe 0 (ix-) $ M.lookup last map) $ M.insert last ix map
