@@ -14,7 +14,7 @@ main = do
       >>= part . addDimension -- 4D
       >>= part . addDimension -- 5D
       >>= part . addDimension -- 6D
-      >>= part . addDimension -- 7D
+      -- >>= part . addDimension -- 7D
 
 part :: (Dimension ix, Ord ix) => Set ix -> IO (Set ix)
 part init = do
@@ -49,3 +49,33 @@ instance Dimension ix => Dimension (Int,ix) where
   
 addDimension :: Ord ix => Set ix -> Set (Int,ix)
 addDimension = S.map (0,)
+
+-- > time ./aoc7D  src/aoc17.dat
+-- 2D: 36
+-- 3D: 333
+-- 4D: 2676
+-- 5D: 13440
+-- 6D: 74448
+-- 7D: 346352
+-- 19946.306u 265.596s 5:37:47.36 99.7%    0+0k 2448+0io 2pf+0w
+
+-- cd ~/haskell/aoc/AoC-2020/src/ && stack ghc -- -o ../aoc -O2 aoc17set && time ../aoc aoc17.dat
+-- [1 of 1] Compiling Main             ( aoc17set.hs, aoc17set.o )
+-- Linking ../aoc ...
+-- 2D: 36
+-- 3D: 333
+-- 4D: 2676
+-- 5D: 13440
+-- 6D: 74448
+-- 669.098u 4.527s 11:15.07 99.7%	0+0k 2344+0io 2pf+0w
+
+-- Without optimize:
+-- cd ~/haskell/aoc/AoC-2020/src/ && stack ghc -- -o ../aoc -O2 aoc17set && time ../aoc aoc17.dat
+-- [1 of 1] Compiling Main             ( aoc17set.hs, aoc17set.o )
+-- Linking ../aoc ...
+-- 2D: 36
+-- 3D: 333
+-- 4D: 2676
+-- 5D: 13440
+-- 6D: 74448
+-- 1196.721u 4.312s 20:04.29 99.7%	0+0k 2344+0io 2pf+0w
