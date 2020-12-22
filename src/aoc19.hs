@@ -21,16 +21,13 @@ ruleLineP :: P.ReadP (Int, String)
 ruleLineP = (,) <$> numberP <* P.string ": " >>= (<$> P.many1 P.get)
 
 makeRuleP :: M.Map Int String -> P.ReadP ()
-makeRuleP map = go 0 where
-  go :: Int -> P.ReadP ()
-  go k = maybe (error $ "Cannot find rule #" ++ show k) pLine $ M.lookup k map
-    where pLine line = case parse rulePP line of
-            [ruleP] -> ruleP
-            _BU -> error $ "Cannot parse rule #" ++ show k ++ ": " ++ show line
+makeRuleP map = mapP M.! 0 where
+  mapP :: M.Map Int (P.ReadP ())
+  mapP = M.map (head . parse rulePP) map
   rulePP, termPP, factorPP :: P.ReadP (P.ReadP ())
   rulePP = P.choice <$> termPP `P.sepBy1` P.string " | "
   termPP = sequence_ <$> factorPP `P.sepBy1` P.char ' '
-  factorPP = go <$> numberP <|> void . P.char <$> letterP
+  factorPP = (mapP M.!) <$> numberP <|> void . P.char <$> letterP
   letterP :: P.ReadP Char
   letterP = P.between (P.char '"') (P.char '"') P.get
 
