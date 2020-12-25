@@ -17,11 +17,11 @@ main = do
 
   let bigPuzzle = take 1_000_000 $ puzzle ++ [maximum puzzle+1 ..]
   
-  myTwoStarsM <- playMutableArray 10_000_000 bigPuzzle >>= mutCollect >>= p "Play Big" . take 2
-  -- Mutable array is not faster than map!
-  -- myTwoStarsU <- playMutableArray 10_000_000 bigPuzzle >>= mutCollect >>= p "Play Big" . take 2
+  -- myTwoStarsM <- playMutableArray 10_000_000 bigPuzzle >>= mutCollect >>= p "Play Big" . take 2
+  -- Mutable array is not much faster than map!
+  myTwoStarsU <- playMutableArray 10_000_000 bigPuzzle >>= mutCollect >>= p "Play Big" . take 2
   -- p "Verify algorithms" (myTwoStarsM == myTwoStarsU)
-  p "Part 2" $ product myTwoStarsM
+  p "Part 2" $ product myTwoStarsU
 
 playList :: Int -> [Int] -> [Int]
 playList n puzzle = go 1 puzzle where
