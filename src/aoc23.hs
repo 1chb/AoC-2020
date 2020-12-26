@@ -16,10 +16,8 @@ main = do
   p "Verify algorithms" (p1L == p1A, p1L == p1M, p1L == p1U)
 
   let bigPuzzle = take 1_000_000 $ puzzle ++ [maximum puzzle+1 ..]
-  
-  -- myTwoStarsM <- playMutableArray 10_000_000 bigPuzzle >>= mutCollect >>= p "Play Big" . take 2
-  -- Mutable array is not much faster than map!
-  myTwoStarsU <- playMutableArray 10_000_000 bigPuzzle >>= mutCollect >>= p "Play Big" . take 2
+  -- myTwoStarsM <- p "Play Big (Map)" $ take 2 $ mapCollect $ playMap 10_000_000 bigPuzzle -- 91.957u 3.052s 1:35.28 99.7%
+  myTwoStarsU <- playMutableArray 10_000_000 bigPuzzle >>= mutCollect >>= p "Play Big (Mut)" . take 2 -- 2.013u 0.036s 0:02.05 99.5%
   -- p "Verify algorithms" (myTwoStarsM == myTwoStarsU)
   p "Part 2" $ product myTwoStarsU
 
@@ -48,21 +46,15 @@ playList n puzzle = go 1 puzzle where
 -- 1->2, 2->5, 3->8, 4->6, 5->4, 6->7, 7->3, 8->9, and 9->1. Now it is O(1) to: locate a cup,
 -- remove the following three cups, insert them after the dest, and find the next current.
 type Arr = A.Array Int Int
-playArray :: Int -> [Int] -> Arr
-playArray n puzzle = go 1 (head puzzle) arr where
+playArray :: Int -> [Int] -> Arr -- This is still not sufficient to solve Part 2.
+playArray n puzzle = snd $ nTimes n body (head puzzle, arr) where
   u = length puzzle
   arr = A.array (1,u) $ zip (last puzzle : puzzle) puzzle
-  go :: Int -> Int -> Arr -> Arr
-  go k c arr -- This is still not sufficient to solve Part 2.
-    | k > n = arr
-    | otherwise =
-        go (k+1) (arr' A.! c) arr' where
-        arr' = arr A.// [(c, arr A.! p2), (p2, arr A.! d), (d, p0)]
-        (p0, p1, p2) = (arr A.! c, arr A.! p0, arr A.! p1)
-        d = dest (c-1)
-        dest d | d==p0 || d==p1 || d==p2 = dest (d-1)
-               | d==0 = dest u
-               | otherwise = d
+  body :: (Int, Arr) -> (Int, Arr)
+  body (c, arr) = (arr' A.! c, arr') where
+    arr' = arr A.// [(c, arr A.! p2), (p2, arr A.! d), (d, p0)]
+    pc@(p0, p1, p2) = (arr A.! c, arr A.! p0, arr A.! p1)
+    d = dest u pc c
 
 arrCollect :: Arr -> [Int]
 arrCollect arr = go (arr A.! 1) where
@@ -71,19 +63,14 @@ arrCollect arr = go (arr A.! 1) where
 
 type Map = M.Map Int Int
 playMap :: Int -> [Int] -> Map
-playMap n puzzle = go 1 (head puzzle) map where
+playMap n puzzle = snd $ nTimes n body (head puzzle, map) where
   u = length puzzle
   map = M.fromList $ zip (last puzzle : puzzle) puzzle
-  go :: Int -> Int -> Map -> Map
-  go k c map
-    | k > n = map
-    | otherwise = go (k+1) (map' M.! c) map' where
-        map' = M.insert c (map M.! p2) $ M.insert p2 (map M.! d) $ M.insert d p0 map
-        (p0, p1, p2) = (map M.! c, map M.! p0, map M.! p1)
-        d = dest (c-1)
-        dest d | d==p0 || d==p1 || d==p2 = dest (d-1)
-               | d==0 = dest u
-               | otherwise = d
+  body :: (Int, Map) -> (Int, Map)
+  body (c, map) = (map' M.! c, map') where
+    map' = M.insert c (map M.! p2) $ M.insert p2 (map M.! d) $ M.insert d p0 map
+    pc@(p0, p1, p2) = (map M.! c, map M.! p0, map M.! p1)
+    d = dest u pc c
 
 mapCollect :: Map -> [Int]
 mapCollect map = go (map M.! 1) where
@@ -95,32 +82,44 @@ playMutableArray :: Int -> [Int] -> IO Mut
 playMutableArray n puzzle = do
   ma <- newArray_ (1,u)
   forM_ (zip (last puzzle : puzzle) puzzle) $ uncurry (writeArray ma)
-  replicateWith n (head puzzle) $ \c -> do
-    p0 <- readArray ma c
-    p1 <- readArray ma p0
-    p2 <- readArray ma p1
-    let d = dest (c-1)
-        dest d | d==p0 || d==p1 || d==p2 = dest (d-1)
-               | d==0 = dest u
-               | otherwise = d
-    readArray ma p2 >>= writeArray ma c
-    readArray ma d >>= writeArray ma p2
-    writeArray ma d p0
-    readArray ma c
-  return ma where
-    u = length puzzle
-
-replicateWith  :: (Monad m) => Int -> a -> (a -> m a) -> m ()
-replicateWith cnt0 x f = loop cnt0 x where
-  loop cnt x
-    | cnt <= 0  = return ()
-    | otherwise = f x >>= loop (cnt - 1)
+  nTimestM n (body ma) (head puzzle)
+  return ma
+    where
+      u = length puzzle
+      body :: Mut -> Int -> IO Int
+      body ma c = do
+        p0 <- readArray ma c
+        p1 <- readArray ma p0
+        p2 <- readArray ma p1
+        let d = dest u (p0, p1, p2) c
+        readArray ma p2 >>= writeArray ma c
+        readArray ma d >>= writeArray ma p2
+        writeArray ma d p0
+        readArray ma c
 
 mutCollect :: Mut -> IO [Int]
 mutCollect arr = readArray arr 1 >>= go where
   go :: Int -> IO [Int]
   go 1 = return []
   go k = (k :) <$> (readArray arr k >>= go)
+
+dest :: Int -> (Int, Int, Int) -> Int -> Int
+dest mx (p0, p1, p2) c = go (c-1) where
+  go d | d==p0 || d==p1 || d==p2 = go (d-1)
+       | d==0 = go mx
+       | otherwise = d
+
+nTimes :: Int -> (a -> a) -> a -> a
+nTimes n f = loop n where
+  loop c
+    | c > 0 = f . loop (c-1)
+    | otherwise = id
+
+nTimestM :: (Monad m) => Int -> (a -> m a) -> a -> m a
+nTimestM n f = loop n where
+  loop c x
+    | c > 0  = f x >>= loop (c-1)
+    | otherwise = return x
 
 p :: (Show x) => String -> x -> IO x
 p label x = do putStrLn $ label ++ ": " ++ show x; return x
