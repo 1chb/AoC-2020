@@ -1,14 +1,14 @@
 {-# LANGUAGE TupleSections #-}
 import qualified Data.Map as M
 import Data.List (sort)
-import System.IO (IOMode(ReadMode), hGetContents, withFile)
 
-main = withFile "aoc10.dat" ReadMode $ \file -> do
-  dat <- hGetContents file
+main = do
+  dat <- readFile "aoc10.dat"
   let nums' = sort $ read <$> words dat
   let nums = nums' ++ [last nums' + 3]
   print $ uncurry (*) $ part1 nums
   print $ snd         $ part2 M.empty 0 nums
+  print $ part2List $ nums
 
 part1 :: [Int] -> (Int, Int)
 part1 = snd . foldl acc (0,(0,0))
@@ -23,3 +23,7 @@ part2 m k xs =
   where
     store (m, t) = (M.insert xs t m, t)
     acc (n, y) (m, t) = (+t) <$> part2 m y (drop n xs)
+
+part2List :: [Int] -> Int -- [Jolt] -> Permutations
+part2List js = last ps where -- Lazy memo:
+  ps = 1 : [sum $ map snd $ takeWhile ((<j).fst) $ dropWhile ((<j-3).fst) $ zip (0 : js) ps | j <- js]
