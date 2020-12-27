@@ -9,6 +9,7 @@ main = do
   print $ uncurry (*) $ part1 nums
   print $ snd         $ part2 M.empty 0 nums
   print $ part2List $ nums
+  print $ part2Map  $ nums
 
 part1 :: [Int] -> (Int, Int)
 part1 = snd . foldl acc (0,(0,0))
@@ -24,6 +25,11 @@ part2 m k xs =
     store (m, t) = (M.insert xs t m, t)
     acc (n, y) (m, t) = (+t) <$> part2 m y (drop n xs)
 
-part2List :: [Int] -> Int -- [Jolt] -> Permutations
+part2List :: [Int] -> Int -- Ordered [Jolt] -> Permutations
 part2List js = last ps where -- Lazy memo:
   ps = 1 : [sum $ map snd $ takeWhile ((<j).fst) $ dropWhile ((<j-3).fst) $ zip (0 : js) ps | j <- js]
+
+part2Map :: [Int] -> Int -- Ordered [Jolt] -> Permutations
+part2Map js = snd $ M.findMax pm where
+  pm = M.fromDistinctAscList $ (0,1) : zip js (perm <$> js)
+  perm j = sum $ snd $ M.split (j-4) $ fst $ M.split j pm
