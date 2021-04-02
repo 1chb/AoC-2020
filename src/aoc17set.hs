@@ -2,7 +2,7 @@
 {-# LANGUAGE TupleSections #-}
 import System.Environment (getArgs)
 import Data.List as L (delete)
-import Data.Set as S (Set, (\\), filter, findMin, fromList, map, member, notMember, size, toList, union)
+import Data.Set as S (Set, (\\), filter, findMin, fromList, map, member, size, toList, union)
 import System.IO
 
 main = do
